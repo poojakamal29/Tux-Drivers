@@ -576,6 +576,33 @@ clear_screens ()
 int
 draw_vert_line (int x)
 {
+	unsigned char buf[SCROLL_Y_DIM]; /* buffer for graphical image of line */
+	unsigned char* addr;			/* address of first pixel in build */
+	
+	int p_off;						/* offset of plane of first pixel */
+	int i;							/* loop index over pixels */
+	
+	/* Check whether requested line falls in the logical view window. */
+	if (x < 0 || x >= SCROLL_X_DIM)
+	return -1;
+	
+	/* Adjust x to the logical row value. */
+	x = x + show_x;
+	
+	/* Get the image of the line. */
+	(*vert_line_fn) (x,show_y , buf);
+	
+	/* Calculate starting address in build buffer */
+	addr = img3 + (x >> 2) + show_y * SCROLL_X_WIDTH;
+	
+	/* Calculate plane offset of first pixel. */
+	p_off = (3 - (x & 3));
+	
+	/* Copy image data into appropriate planes into build buffer. */
+	for (i = 0; i < SCROLL_Y_DIM; i++) {
+	addr[p_off * SCROLL_SIZE + i * SCROLL_X_WIDTH] = buf[i];
+	}
+
     /* to be written... */
     return 0;
 }
@@ -609,7 +636,7 @@ draw_horiz_line (int y)
 
     /* Adjust y to the logical row value. */
     y += show_y;
-
+	
     /* Get the image of the line. */
     (*horiz_line_fn) (show_x, y, buf);
 
