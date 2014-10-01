@@ -888,6 +888,7 @@ fill_palette_mode_x ()
  *   RETURN VALUE: none
  *   SIDE EFFECTS: changes the first 32 palette colors
  */   
+ 
 static void
 fill_palette_text ()
 {
@@ -1020,6 +1021,21 @@ copy_image (unsigned char* img, unsigned short scr_addr)
       : "eax", "ecx", "memory"
     );
 }
+
+/*
+ * draw_status_bar
+ *   DESCRIPTION: Draws the status bar to the screen by getting the buffer from
+ *                text_graphics and then calling copy_status.
+ *   INPUTS: room -- a pointer to the room string
+ *           status -- a pointer to the status string
+ *			 typed_text -- a pointer to the typed text (command line) string.
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: Draws the status bar on the screen
+ */   
+
+
+
 
  void draw_status_bar (const char * room, const char * status, const char * typed_text)
  {

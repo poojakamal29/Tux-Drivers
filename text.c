@@ -562,19 +562,32 @@ unsigned char font_data[256][16] = {
      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 };
 
+/*
+ * text_to_graphics
+ *   DESCRIPTION: Creates the buffer for the status bar by writing to all 4 planes in each address.
+ *   INPUTS: buf - pointer to the buffer array
+ *			 str - pointer to the string (i.e room, status, typed_text)
+ *			 alignment - integer that indicates which string is being passed in
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: Fills buffer array with colors depending on the pixels in the string.
+ */   
+
 void text_to_graphics(unsigned char * buf, const char * str, int alignment)
 {
-	int i,j,k;    /* loop counter variable */
+	int i,j,k;    			/* loop counter variables */
 	int len = strlen(str);
 	unsigned char temp_char;
 	int address;
+	int start_y = 1;
+	int start_x;
+	/* calculate the offsets of each different string */
 	int left_align = 0;
 	int center_align = 40 - len;
 	int right_align = 2*center_align;
-	int start_y = 1;
-	int start_x;
+
 	
-	/* These if statements decides which alignment to use */
+	/* These if statements decides which offset to use based on alignment */
 	if (alignment == 0)
 	{
 		start_x = left_align;
@@ -587,7 +600,8 @@ void text_to_graphics(unsigned char * buf, const char * str, int alignment)
 	{
 		start_x = right_align;
 	}
-	/* STATUS_SIZE*4 to account for 4 planes per address */
+	
+	/* first check if string is empty */
 	if (len != 0)
 	{
 		for(i = 0; i < len; i++)
@@ -599,18 +613,20 @@ void text_to_graphics(unsigned char * buf, const char * str, int alignment)
 				temp_char = font_data[(int)str[i]][j];
 				for(k = 0; k < FONT_WIDTH; k++)
 				{
+					/* examine a specific pixel */
 					unsigned char bmask = (128 >> (k));
+					
 					/* calculate the start address of the letter and check each pixel */
 					if ((temp_char & bmask) != 0)
 					{
 						if( k > 3)
 						{
-							address = (k % PLANES * STATUS_ADDRESSES) + (j + start_y) * IMAGE_X_WIDTH + 2*i + 1 + start_x;
+							address = (k % PLANES * STATUS_SIZE) + (j + start_y) * IMAGE_X_WIDTH + 2*i + 1 + start_x;
 							buf[address] = TEXT_COLOR;
 						}
 						else
 						{
-							address = (k % PLANES * STATUS_ADDRESSES + (start_y + j) * IMAGE_X_WIDTH + 2*i + start_x);
+							address = (k % PLANES * STATUS_SIZE + (start_y + j) * IMAGE_X_WIDTH + 2*i + start_x);
 							buf[address] = TEXT_COLOR;
 						}
 					}

@@ -247,6 +247,7 @@ game_loop ()
 	    enter_room = 0;
 	}
 	show_screen ();
+	/* use mutexes to synchronize the status bar */
 	pthread_mutex_lock(&msg_lock);
 	draw_status_bar(room_name(game_info.where), status_msg, get_typed_command());
 	pthread_mutex_unlock(&msg_lock);

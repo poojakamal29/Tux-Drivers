@@ -46,8 +46,8 @@
 #define SCROLL_X_DIM	IMAGE_X_DIM                /* full image width      */
 #define SCROLL_Y_DIM    IMAGE_Y_DIM                /* full image width      */
 #define SCROLL_X_WIDTH  (IMAGE_X_DIM / 4)          /* addresses (bytes)     */
-#define NUM_STATUS_ROWS 18
-#define STATUS_SIZE (SCROLL_X_WIDTH * NUM_STATUS_ROWS)
+#define NUM_STATUS_ROWS 18							/* height of status bar, allows for one pixel above and below */
+#define STATUS_SIZE (SCROLL_X_WIDTH * NUM_STATUS_ROWS) /* size of the status bar in addresses */
 #define STATUS_ADDRESSES	 1440	/* define amount of addresses */
 #define COLOR 3			/*Set the color of the status bar to blue */
 #define TEXT_COLOR 63	/* Set the color of the text */
