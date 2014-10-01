@@ -562,3 +562,60 @@ unsigned char font_data[256][16] = {
      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 };
 
+void text_to_graphics(unsigned char * buf, const char * str, int alignment)
+{
+	int i,j,k;    /* loop counter variable */
+	int len = strlen(str);
+	unsigned char temp_char;
+	int address;
+	int left_align = 0;
+	int center_align = 40 - len;
+	int right_align = 2*center_align;
+	int start_y = 1;
+	int start_x;
+	
+	/* These if statements decides which alignment to use */
+	if (alignment == 0)
+	{
+		start_x = left_align;
+	}
+	else if (alignment == 1)
+	{
+		start_x = center_align;
+	}
+	else if (alignment == 2)
+	{
+		start_x = right_align;
+	}
+	/* STATUS_SIZE*4 to account for 4 planes per address */
+	if (len != 0)
+	{
+		for(i = 0; i < len; i++)
+		{
+			/* iterate through each row of the letter */
+			for(j = 0; j < FONT_HEIGHT; j++)
+			{
+				/* Iterate through each pixel of a row */
+				temp_char = font_data[(int)str[i]][j];
+				for(k = 0; k < FONT_WIDTH; k++)
+				{
+					unsigned char bmask = (128 >> (k));
+					/* calculate the start address of the letter and check each pixel */
+					if ((temp_char & bmask) != 0)
+					{
+						if( k > 3)
+						{
+							address = (k % PLANES * STATUS_ADDRESSES) + (j + start_y) * IMAGE_X_WIDTH + 2*i + 1 + start_x;
+							buf[address] = TEXT_COLOR;
+						}
+						else
+						{
+							address = (k % PLANES * STATUS_ADDRESSES + (start_y + j) * IMAGE_X_WIDTH + 2*i + start_x);
+							buf[address] = TEXT_COLOR;
+						}
+					}
+				}
+			}
+		}
+	}
+}
