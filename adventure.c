@@ -318,8 +318,10 @@ game_loop ()
 	    default: break;
 	}
 
-	/* If player wins the game, their room becomes NULL. */
+	/* get the current game time and put it on the tux */
 	display_time_on_tux(cur_time.tv_sec - start_time.tv_sec);
+
+	/* If player wins the game, their room becomes NULL. */
 	if (NULL == game_info.where) {
 	    return GAME_WON;
 	}

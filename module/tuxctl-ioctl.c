@@ -32,7 +32,7 @@
 	/* global variables */
 	static unsigned char button_press;
 	static unsigned int led_save; // save the state of the LED
-	static int reset_flag = 0;
+	static int reset_flag = 0; // flag used to check reset
 
 	//hard code the hex for the seven segment display
 	static unsigned char hex_led[16] =
@@ -42,6 +42,7 @@
 	  0xE1, 0x4F, 0xE9, 0xE8
 	};
 
+#define CLEARIT 0x000F0000
 	/* declare some locks */
 	spinlock_t lock;
 
@@ -83,6 +84,7 @@ void tuxctl_handle_packet (struct tty_struct* tty, unsigned char* packet)
     		handle_bioc(b,c);
     		break;
     	case MTCP_ACK:
+    		/* checks if reset flag is set, if it is, set the leds */
     		if(reset_flag == 1)
     		{
     			reset_flag = 0;
@@ -152,7 +154,7 @@ tux_init (struct tty_struct * tty)
 	spin_lock_init (&lock);
 
 	button_press = 0x00;
-	led_save = 0x000F0000;
+	led_save = CLEARIT;
 
 	buf[0] = MTCP_LED_USR;
 	buf[1] = MTCP_BIOC_ON;
@@ -321,7 +323,7 @@ int buttons(struct tty_struct* tty, unsigned long arg)
  */
 void clear_LED(struct tty_struct* tty) {
 	unsigned char clear_buf[6];
-
+// fill a clear buffer to display nothing on the LEDS
 	clear_buf[0] = MTCP_LED_SET;
 	clear_buf[1] = 0x0F;
 	clear_buf[2] = 0x00;
