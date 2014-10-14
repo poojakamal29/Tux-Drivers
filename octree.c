@@ -4,7 +4,15 @@
 
 #include "octree.h"
 
-/* create a struct that represents the second level of the octree */
+/*
+* build_row_two
+* DESCRIPTION: Sets up octree array values used in the first run over
+* INPUTS: row_two: array representing the nodes on the second row of the octree
+* 					size: the size of the second row of the octree
+* OUTPUTS: none
+* RETURN VALUE: none
+* SIDE EFFECTS: initializes and array of size row_two_size.
+*/
 void build_row_two(struct octree_node* row_two, int size)
 {
 	int i;
@@ -19,7 +27,7 @@ void build_row_two(struct octree_node* row_two, int size)
 }
 
 /*
-* setup_octree
+* build_octree
 * DESCRIPTION: Sets up octree array values used in the first run over
 * INPUTS: row_four: array representing the nodes on the fourth level of the octree
 * 					row_four_palette_indices: array that mapes row_four pixels to palette
@@ -59,8 +67,8 @@ void process_pixel(uint16_t pixel, struct octree_node* row_four)
 	i += (green_offset * ((pixel >> (shift_green + 2)) & bit_mask));
 	i += ((pixel >> (shift_blue + 1)) & bit_mask);
 
-	// pixels correspond to RGB [5:6:5] so red and blue need to be extended
 	row_four[i].matches++;
+	// pixels correspond to RGB [5:6:5] so red and blue need to be extended
 	//multiplied by two to sign extend to 6 bits
 	row_four[i].red_total += ((pixel >> shift_red) *2);
 	row_four[i].green_total += ((pixel >> shift_green) & six_bit_mask);
@@ -126,7 +134,7 @@ void make_palette(uint8_t palette[192][3], struct octree_node* row_four, int* ro
 		row_two_index += (16*((row_four[i].index >> (shift_red - 1)) & two_bit_mask));
 		row_two_index += (4*((row_four[i].index >> (shift_green + 1)) & two_bit_mask));
 		row_two_index += ((row_four[i].index >> (shift_blue + 2)) & two_bit_mask);
-		// now take the averages
+		// now update the totals
 		row_two[row_two_index].matches += row_four[i].matches;
 		row_two[row_two_index].red_total += row_four[i].red_total;
 		row_two[row_two_index].green_total += row_four[i].green_total;
@@ -139,6 +147,7 @@ void make_palette(uint8_t palette[192][3], struct octree_node* row_four, int* ro
 		// if there were row_four values corresponding to the row_two values, use the info we have.
 		if(row_two[i].matches != 0)
 		{
+			/* start from 129 because 128 of the colors were already filled */
 			palette[i + specific_colors][0] = (row_two[i].red_total / row_two[i].matches);
 			palette[i + specific_colors][1] = (row_two[i].green_total / row_two[i].matches);
 			palette[i + specific_colors][2] = (row_two[i].blue_total / row_two[i].matches);

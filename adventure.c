@@ -133,7 +133,6 @@ static const typed_cmd_t cmd_list[] = {
 
 /* local functions--see function headers for details */
 
-static void cancel_status_thread (void* ignore);
 static game_condition_t game_loop (void);
 static int32_t handle_typing (void);
 static void init_game (void);
@@ -165,6 +164,7 @@ static game_info_t game_info; /* game information */
  * is changed, the helper thread must be notified by signaling it with the 
  * condition variable msg_cv (while holding the msg_lock).
  */
+
 static pthread_t status_thread_id;
 static pthread_mutex_t msg_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  msg_cv = PTHREAD_COND_INITIALIZER;
@@ -185,7 +185,6 @@ cancel_status_thread (void* ignore)
 {
     (void)pthread_cancel (status_thread_id);
 }
-
 
 /* 
  * game_loop
@@ -223,6 +222,7 @@ game_loop ()
 
     /* The main event loop. */
     while (1) {
+
 	/* 
 	 * Update the screen, preparing the VGA palette and photo-drawing
 	 * routines and drawing a new room photo first if the player has
@@ -319,6 +319,7 @@ game_loop ()
 	}
 
 	/* If player wins the game, their room becomes NULL. */
+	display_time_on_tux(cur_time.tv_sec - start_time.tv_sec);
 	if (NULL == game_info.where) {
 	    return GAME_WON;
 	}
@@ -764,7 +765,9 @@ main ()
     if (0 != pthread_create (&status_thread_id, NULL, status_thread, NULL)) {
         PANIC ("failed to create status thread");
     }
-    push_cleanup (cancel_status_thread, NULL); {
+
+    		push_cleanup (cancel_status_thread, NULL);
+    		{
 
 	/* Start mode X. */
 	if (0 != set_mode_X (fill_horiz_buffer, fill_vert_buffer)) {
@@ -785,6 +788,8 @@ main ()
 	} pop_cleanup (1);
 
     } pop_cleanup (1);
+
+
 
     /* Print a message about the outcome. */
     switch (game) {

@@ -56,20 +56,20 @@
 
 #include "assert.h"
 #include "input.h"
- #include "module/tuxctl-ioctl.h"
+#include "module/tuxctl-ioctl.h"
 
 /* set to 1 and compile this file by itself to test functionality */
-#define TEST_INPUT_DRIVER 1
+#define TEST_INPUT_DRIVER 0
 
 /* set to 1 to use tux controller; otherwise, uses keyboard input */
 #define USE_TUX_CONTROLLER 1
 
-
+/* variable ot indicate 0 in hex */
+#define NOTHING 0x0
 /* stores original terminal settings */
 static struct termios tio_orig;
-
 static int fd;
-
+static int prev_time;
 
 /* 
  * init_input
@@ -120,10 +120,11 @@ init_input ()
     }
 
     /* Return success. */
-    int fd = open("/dev/ttyS0", O_RDWR | O_NOCTTY);
+    prev_time = 0;
+    fd = open("/dev/ttyS0", O_RDWR | O_NOCTTY);
 	int ldisc_num = N_MOUSE;
 	ioctl(fd, TIOCSETD, &ldisc_num);
-	ioctl(fd, TUX_INIT, &ldisc_num);
+	ioctl(fd, TUX_INIT);
 	printf("init input\n");
     return 0;
 }
@@ -280,37 +281,37 @@ get_command ()
 	if (USE_TUX_CONTROLLER != 0)
 	{
 		/* add tux support */
-		unsigned int button_press = 0;
-		if(ioctl(fd, TUX_BUTTONS, &button_press))
-			printf("debug");
+		unsigned char button_press = 0;
+		ioctl(fd, TUX_BUTTONS, &button_press);
+		/* use a switch statement to determine the command to issue depending on the button */
 		switch(button_press)
 		{
-			case 0x01:
+			case 0xFE:
 				pushed = CMD_QUIT;
-				printf("Start\n");
+				//printf("Start\n");
 				break;
-			case 0x02:
+			case 0xFD:
 				pushed = CMD_MOVE_LEFT;
-				printf("A\n");
+				//printf("A\n");
 				break;
-			case 0x04:
+			case 0xFB:
 				pushed = CMD_ENTER;
-				printf("B\n");
+				//printf("B\n");
 				break;
-			case 0x08:
+			case 0xF7:
 				pushed = CMD_MOVE_RIGHT;
-				printf("C\n");
+				//printf("C\n");
 				break;
-			case 0x10:
+			case 0xEF:
 				pushed = CMD_UP;
 				break;
-			case 0x20:
-				pushed = CMD_DOWN;
-				break;
-			case 0x40:
+			case 0xDF:
 				pushed = CMD_LEFT;
 				break;
-			case 0x80:
+			case 0xBF:
+				pushed = CMD_DOWN;
+				break;
+			case 0x7F:
 				pushed = CMD_RIGHT;
 				break;
 			default:
@@ -358,67 +359,63 @@ display_time_on_tux (int num_seconds)
 {
 #if (USE_TUX_CONTROLLER != 0)
 //#error "Tux controller code is not operational yet."
-	int digits[4]; /* index 0 is the right most digit on the controller */
-	int time_in_hex = 0x0;
-	int minutes = num_seconds/60;
-	int seconds = num_seconds - 60*minutes;
-	int deci_pt = 0x0;
-	int led_to_light = 0x0;
+	unsigned int digits[4]; /* index 0 is the right most digit on the controller */
+	unsigned int time_in_hex = NOTHING;
+	unsigned int deci_pt = 0x4;
+	unsigned int led_to_light = NOTHING;
 	int i;
-	int arg = 0x0;
+	unsigned int arg = NOTHING;
+/* initialize the array to 0's */
+for (i = 0; i < 4; i++)
+{
+		digits[i] = NOTHING;
+}
 
-	for (i = 0; i < 4; i++)
-	{
-		digits[i] = 0x0;
-	}
-
-	if ( num_seconds > 59)
-	{
-		deci_pt = 0x4;
-	}
-	if(num_seconds < 10)
-	{
-		led_to_light = 0x1;
-	}
-	else if (num_seconds < 60)
-	{
-		led_to_light = 0x3;
-	}
-	else if (num_seconds < 600)
+/* if time has changed, act accordingly */
+if(num_seconds != prev_time)
+{
+	prev_time = num_seconds;
+	/* check if time is over 10 mins */
+	if (num_seconds < 600)
 	{
 		led_to_light = 0x7;
 	}
 	else
 		led_to_light = 0xF;
-
-	if(num_seconds > 60)
-	{
-		digits[0] = seconds%10;
-		seconds /= 10;
-		digits[1] = seconds;
-		digits[2] %= minutes;
-		minutes /= 10;
-		digits[3] = minutes;
-	}
-	else
+	/* if it's over 1 minute, fill the digits array accordingly */
+	if(num_seconds < 60)
 	{
 		digits[0] = num_seconds % 10;
 		num_seconds /= 10;
 		digits[1] = num_seconds;
 	}
-
-	for(i = 0; i < 4; i++)
+	else
+	{
+		unsigned int minutes = num_seconds/60;
+		unsigned int seconds = num_seconds - 60*minutes;
+		digits[0] = seconds%10;
+		seconds /= 10;
+		digits[1] = seconds;
+		digits[2] = minutes % 10;
+		minutes /= 10;
+		digits[3] = minutes;
+	}
+	/* only run 3 times, because it doesn't need to be shifted 4 times */
+	for(i = 0; i < 3; i++)
 	{
 		time_in_hex |= digits[3 - i];
 		time_in_hex = time_in_hex << 4;
 	}
-
+	/* accounts for the last index in the digits array */
+	time_in_hex |= digits[0]; 
+	/* create arg to pass into TUX_SET_LED */
 	arg |= deci_pt;
 	arg = arg << 8;
 	arg = arg | led_to_light;
 	arg = arg << 16;
 	arg = arg | time_in_hex;
 	ioctl(fd, TUX_SET_LED, arg);
+}
 #endif
 }
 
