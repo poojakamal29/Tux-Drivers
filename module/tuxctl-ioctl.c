@@ -31,7 +31,6 @@
 
 	/* global variables */
 	static unsigned char button_press;
-	static int ack_flag = 1;
 	static unsigned int led_save; // save the state of the LED
 	static int reset_flag = 0;
 
