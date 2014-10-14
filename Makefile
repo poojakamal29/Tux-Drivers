@@ -1,8 +1,8 @@
 all: adventure tr mp2photo mp2object
 
 HEADERS=assert.h input.h modex.h photo.h photo_headers.h text.h types.h \
-	world.h Makefile
-OBJS=adventure.o assert.o modex.o input.o photo.o text.o world.o
+	world.h octree.h Makefile
+OBJS=adventure.o assert.o modex.o input.o photo.o text.o world.o octree.o
 
 CFLAGS=-g -Wall
 

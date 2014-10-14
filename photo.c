@@ -43,7 +43,33 @@
 #include "photo.h"
 #include "photo_headers.h"
 #include "world.h"
+#include "octree.h"
 
+/* macro used to write a byte to a port */
+#define OUTB(port,val)                                                  \
+do {                                                                    \
+    asm volatile ("                                                     \
+        outb %b1,(%w0)                                                  \
+    " : /* no outputs */                                                \
+      : "d" ((port)), "a" ((val))                                       \
+      : "memory", "cc");                                                \
+} while (0)
+
+/* 
+ * macro used to write an array of one-byte values to two consecutive ports 
+ */
+#define REP_OUTSB(port,source,count)                                    \
+do {                                                                    \
+    asm volatile ("                                                     \
+     1: movb 0(%1),%%al                                                ;\
+	outb %%al,(%w2)                                                ;\
+	incl %1                                                        ;\
+	decl %0                                                        ;\
+	jne 1b                                                          \
+    " : /* no outputs */                                                \
+      : "c" ((count)), "S" ((source)), "d" ((port))                     \
+      : "eax", "memory", "cc");                                         \
+} while (0)
 
 /* types local to this file (declared in types.h) */
 
@@ -317,6 +343,55 @@ prep_room (const room_t* r)
 {
     /* Record the current room. */
     cur_room = r;
+    photo_t* cur_photo = room_photo(cur_room);
+	static unsigned char palette_RGB[256][3] = {
+	{0x00, 0x00, 0x00}, {0x00, 0x00, 0x15},
+	{0x00, 0x00, 0x2A}, {0x00, 0x00, 0x3F},
+	{0x00, 0x15, 0x00}, {0x00, 0x15, 0x15},
+	{0x00, 0x15, 0x2A}, {0x00, 0x15, 0x3F},
+	{0x00, 0x2A, 0x00}, {0x00, 0x2A, 0x15},
+	{0x00, 0x2A, 0x2A}, {0x00, 0x2A, 0x3F},
+	{0x00, 0x3F, 0x00}, {0x00, 0x3F, 0x15},
+	{0x00, 0x3F, 0x2A}, {0x00, 0x3F, 0x3F},
+	{0x15, 0x00, 0x00}, {0x15, 0x00, 0x15},
+	{0x15, 0x00, 0x2A}, {0x15, 0x00, 0x3F},
+	{0x15, 0x15, 0x00}, {0x15, 0x15, 0x15},
+	{0x15, 0x15, 0x2A}, {0x15, 0x15, 0x3F},
+	{0x15, 0x2A, 0x00}, {0x15, 0x2A, 0x15},
+	{0x15, 0x2A, 0x2A}, {0x15, 0x2A, 0x3F},
+	{0x15, 0x3F, 0x00}, {0x15, 0x3F, 0x15},
+	{0x15, 0x3F, 0x2A}, {0x15, 0x3F, 0x3F},
+	{0x2A, 0x00, 0x00}, {0x2A, 0x00, 0x15},
+	{0x2A, 0x00, 0x2A}, {0x2A, 0x00, 0x3F},
+	{0x2A, 0x15, 0x00}, {0x2A, 0x15, 0x15},
+	{0x2A, 0x15, 0x2A}, {0x2A, 0x15, 0x3F},
+	{0x2A, 0x2A, 0x00}, {0x2A, 0x2A, 0x15},
+	{0x2A, 0x2A, 0x2A}, {0x2A, 0x2A, 0x3F},
+	{0x2A, 0x3F, 0x00}, {0x2A, 0x3F, 0x15},
+	{0x2A, 0x3F, 0x2A}, {0x2A, 0x3F, 0x3F},
+	{0x3F, 0x00, 0x00}, {0x3F, 0x00, 0x15},
+	{0x3F, 0x00, 0x2A}, {0x3F, 0x00, 0x3F},
+	{0x3F, 0x15, 0x00}, {0x3F, 0x15, 0x15},
+	{0x3F, 0x15, 0x2A}, {0x3F, 0x15, 0x3F},
+	{0x3F, 0x2A, 0x00}, {0x3F, 0x2A, 0x15},
+	{0x3F, 0x2A, 0x2A}, {0x3F, 0x2A, 0x3F},
+	{0x3F, 0x3F, 0x00}, {0x3F, 0x3F, 0x15},
+	{0x3F, 0x3F, 0x2A}, {0x3F, 0x3F, 0x3F}
+};
+
+	int i;
+	for (i = 0; i < 192; i++)
+	{
+		palette_RGB[i + 64][0] = cur_photo->palette[i][0];
+		palette_RGB[i + 64][1] = cur_photo->palette[i][1];
+		palette_RGB[i + 64][2] = cur_photo->palette[i][2];		
+	}
+
+	/* start writing at color 0. */
+	OUTB (0x03C8, 0x00);
+
+	/* Write all 64 colors from array. */
+	REP_OUTSB (0x03C9, palette_RGB, 256 * 3);
 }
 
 
@@ -444,6 +519,10 @@ read_photo (const char* fname)
 	return NULL;
     }
 
+    struct octree_node row_four[row_four_size];
+    int palette_to_pixel[row_four_size];
+    build_octree(row_four, palette_to_pixel);
+
     /* 
      * Loop over rows from bottom to top.  Note that the file is stored
      * in this order, whereas in memory we store the data in the reverse
@@ -461,10 +540,31 @@ read_photo (const char* fname)
 	    if (1 != fread (&pixel, sizeof (pixel), 1, in)) {
 		free (p->img);
 		free (p);
-	        (void)fclose (in);
+	    (void)fclose (in);
 		return NULL;
 
 	    }
+
+	    process_pixel(pixel, row_four);
+	}
+}
+	make_palette(p->palette, row_four, palette_to_pixel);
+	rewind(in);
+
+	    for (y = p->hdr.height; y-- > 0; ) {
+		/* Loop over columns from left to right. */
+		for (x = 0; p->hdr.width > x; x++){
+
+			/* 
+			 * Try to read one 16-bit pixel.  On failure, clean up and 
+			 * return NULL.
+			 */
+			if (1 != fread (&pixel, sizeof (pixel), 1, in)) {
+				free (p->img);
+				free (p);
+				(void)fclose (in);
+				return NULL;
+			}
 	    /* 
 	     * 16-bit pixel is coded as 5:6:5 RGB (5 bits red, 6 bits green,
 	     * and 6 bits blue).  We change to 2:2:2, which we've set for the
@@ -476,15 +576,12 @@ read_photo (const char* fname)
 	     * the game puts up a photo, you should then change the palette 
 	     * to match the colors needed for that photo.
 	     */
-	    p->img[p->hdr.width * y + x] = (((pixel >> 14) << 4) |
-					    (((pixel >> 9) & 0x3) << 2) |
-					    ((pixel >> 3) & 0x3));
-	}
+	    p->img[p->hdr.width * y + x - 2] = (row_two_size + search_palette(pixel, palette_to_pixel));
+		}
     }
 
     /* All done.  Return success. */
     (void)fclose (in);
     return p;
 }
-
 

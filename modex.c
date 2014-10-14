@@ -443,15 +443,15 @@ set_view_window (int scr_x, int scr_y)
      */
     if (scr_x > old_x) {
         start_x = scr_x;
-	end_x = old_x;
+	       end_x = old_x;
     } else {
         start_x = old_x;
-	end_x = scr_x;
+      	end_x = scr_x;
     }
     end_x += SCROLL_X_DIM - 1;
     if (scr_y > old_y) {
         start_y = scr_y;
-	end_y = old_y;
+	       end_y = old_y;
     } else {
         start_y = old_y;
 	end_y = scr_y;
@@ -517,6 +517,9 @@ show_screen ()
     /* Draw to each plane in the video memory. */
     for (i = 0; i < 4; i++) {
 	SET_WRITE_MASK (1 << (i + 8));
+  /*added line here
+  * memcpy(mem_image, buf + (i * 1440), 1440);
+  */
 	copy_image (addr + ((p_off - i + 4) & 3) * SCROLL_SIZE + (p_off < i), 
 	            target_img);
     }
