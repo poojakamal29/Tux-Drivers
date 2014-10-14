@@ -576,6 +576,7 @@ read_photo (const char* fname)
 	     * the game puts up a photo, you should then change the palette 
 	     * to match the colors needed for that photo.
 	     */
+	     /* map the pixels with the palette */
 	    p->img[p->hdr.width * y + x - 2] = (row_two_size + search_palette(pixel, palette_to_pixel));
 		}
     }

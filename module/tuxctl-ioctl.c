@@ -181,13 +181,6 @@ void reset(struct tty_struct* tty)
 
 	reset_flag = 1;
 	tuxctl_ldisc_put(tty, reset_buffer_array, 2);
-	//clear_LED(tty);
-
-	/* if led is not in a cleared state, set it */
-/*	if(led_save != 0x000F0000)
-	{
-		set_LED(tty, led_save);
-	}*/
 	spin_unlock(&lock);
 }
 
